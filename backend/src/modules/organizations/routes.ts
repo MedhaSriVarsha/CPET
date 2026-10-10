@@ -204,7 +204,7 @@ organizationsRouter.get(
 );
 
 /**
- * Organization Team Roster
+ * Organization Team Roster (Active & Inactive with Assigned Workload)
  */
 organizationsRouter.get(
   '/:orgId/members',
@@ -213,23 +213,51 @@ organizationsRouter.get(
   tenantScope,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const orgId = req.params.orgId;
+      const allCases = await caseService.getCasesForOrganization(orgId);
+
       let members: any[];
       if (memoryStore.isDbConnected()) {
         members = await UserModel.find({
-          organizationId: req.params.orgId,
-          isActive: true,
+          organizationId: orgId,
+          isDeleted: { $ne: true },
         })
-          .select('name email phone role lastLoginAt createdAt')
+          .select('name email phone role isActive lastLoginAt createdAt')
           .lean();
       } else {
         members = Array.from(memoryStore.users.values()).filter(
-          (u) => u.organizationId === req.params.orgId && u.isActive
+          (u) => u.organizationId === orgId
         );
       }
 
+      // Compute live workload (active assigned cases) for each team member
+      const enrichedMembers = members.map((m: any) => {
+        const memberIdStr = (m._id || m.id).toString();
+        const assignedActiveCases = allCases.filter(
+          (c: any) =>
+            (c.assignedAgentId?.toString() === memberIdStr || c.assignedAgentName === m.name) &&
+            c.status !== 'RESOLVED' &&
+            c.status !== 'CLOSED'
+        );
+
+        return {
+          _id: memberIdStr,
+          id: memberIdStr,
+          name: m.name,
+          email: m.email,
+          phone: m.phone || '',
+          role: m.role || 'ORGANIZATION_AGENT',
+          isActive: m.isActive !== undefined ? Boolean(m.isActive) : true,
+          status: (m.isActive !== false) ? 'ACTIVE' : 'INACTIVE',
+          assignedCasesCount: assignedActiveCases.length,
+          lastLoginAt: m.lastLoginAt || m.updatedAt || m.createdAt,
+          createdAt: m.createdAt,
+        };
+      });
+
       res.status(200).json({
         success: true,
-        data: members,
+        data: enrichedMembers,
       });
     } catch (error) {
       next(error);
@@ -248,7 +276,7 @@ organizationsRouter.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { name, email, role, password, phone } = req.body;
-      const emailKey = email.toLowerCase();
+      const emailKey = email.toLowerCase().trim();
 
       if (memoryStore.isDbConnected()) {
         const existing = await UserModel.findOne({ email: emailKey });
@@ -273,10 +301,15 @@ organizationsRouter.post(
           success: true,
           message: 'Team member added successfully.',
           data: {
-            id: newMember._id,
+            id: newMember._id.toString(),
+            _id: newMember._id.toString(),
             name: newMember.name,
             email: newMember.email,
+            phone: newMember.phone,
             role: newMember.role,
+            isActive: true,
+            status: 'ACTIVE',
+            assignedCasesCount: 0,
           },
         });
       } else {
@@ -309,12 +342,78 @@ organizationsRouter.post(
           message: 'Team member added successfully.',
           data: {
             id: newMember._id,
+            _id: newMember._id,
             name: newMember.name,
             email: newMember.email,
+            phone: newMember.phone,
             role: newMember.role,
+            isActive: true,
+            status: 'ACTIVE',
+            assignedCasesCount: 0,
           },
         });
       }
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * Manage Team Member Status (Active / Inactive / Role Update)
+ */
+organizationsRouter.patch(
+  '/:orgId/members/:memberId/status',
+  authenticate,
+  authorize('ORGANIZATION_ADMIN', 'SUPER_ADMIN'),
+  tenantScope,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { isActive, role, phone } = req.body;
+      let updatedMember: any;
+
+      if (memoryStore.isDbConnected()) {
+        const updateData: any = {};
+        if (isActive !== undefined) updateData.isActive = Boolean(isActive);
+        if (role) updateData.role = role;
+        if (phone) updateData.phone = phone;
+
+        updatedMember = await UserModel.findOneAndUpdate(
+          { _id: req.params.memberId, organizationId: req.params.orgId },
+          { $set: updateData },
+          { new: true }
+        ).select('name email phone role isActive updatedAt');
+
+        if (!updatedMember) {
+          throw new NotFoundError('Team member not found in this organization.');
+        }
+      } else {
+        const member = memoryStore.users.get(req.params.memberId);
+        if (!member || member.organizationId !== req.params.orgId) {
+          throw new NotFoundError('Team member not found in this organization.');
+        }
+        if (isActive !== undefined) member.isActive = Boolean(isActive);
+        if (role) member.role = role as UserRole;
+        if (phone) member.phone = phone;
+        member.updatedAt = new Date();
+        memoryStore.users.set(req.params.memberId, member);
+        updatedMember = member;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: `Team member status updated to ${updatedMember.isActive ? 'Active' : 'Inactive'}.`,
+        data: {
+          id: updatedMember._id.toString(),
+          _id: updatedMember._id.toString(),
+          name: updatedMember.name,
+          email: updatedMember.email,
+          phone: updatedMember.phone,
+          role: updatedMember.role,
+          isActive: Boolean(updatedMember.isActive),
+          status: updatedMember.isActive ? 'ACTIVE' : 'INACTIVE',
+        },
+      });
     } catch (error) {
       next(error);
     }

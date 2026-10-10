@@ -10,6 +10,8 @@ import {
   otpVerifySchema,
   otpResendSchema,
   refreshTokenSchema,
+  resetPasswordSchema,
+  socialAuthSchema,
 } from './schemas.js';
 
 export const authRouter = Router();
@@ -17,6 +19,14 @@ export const authRouter = Router();
 authRouter.post('/citizen/signup', validate(citizenSignupSchema), authController.registerCitizen);
 authRouter.post('/organization/signup', validate(orgSignupSchema), authController.registerOrganization);
 authRouter.post('/login', validate(loginSchema), authController.login);
+
+// Password Reset Flow
+authRouter.post('/reset-password', otpRateLimiter, validate(resetPasswordSchema), authController.resetPassword);
+
+// Social OAuth (Google & Apple)
+authRouter.post('/social-login', validate(socialAuthSchema), authController.socialLogin);
+authRouter.post('/google', validate(socialAuthSchema), authController.socialLogin);
+authRouter.post('/apple', validate(socialAuthSchema), authController.socialLogin);
 
 // OTP Endpoints with strict Rate Limiting
 authRouter.post('/otp/request', otpRateLimiter, validate(otpRequestSchema), authController.requestOtp);

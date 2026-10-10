@@ -15,6 +15,7 @@ export const registeredModules: string[] = [
   'requests',
   'complaints',
   'services',
+  'forms',
   'blood',
   'ai',
   'schemas',

@@ -8,6 +8,8 @@ import { socketManager } from './infrastructure/socket.js';
 import { escalationQueueService } from './modules/escalation/escalation.queue.js';
 import { dispatchQueueService } from './modules/routing/dispatch.queue.js';
 
+import { syncMongoSeedFixtures } from './infrastructure/mongoSeeder.js';
+
 let server: http.Server | null = null;
 
 async function bootstrap() {
@@ -17,6 +19,7 @@ async function bootstrap() {
   try {
     await dbManager.connect({ uri: env.MONGODB_URI });
     logger.info('[CPET Backend] MongoDB connected');
+    await syncMongoSeedFixtures();
   } catch (err: any) {
     logger.warn(`[CPET Backend] Initial MongoDB connection skipped/pending: ${err.message}`);
   }

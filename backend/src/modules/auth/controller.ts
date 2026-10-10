@@ -4,19 +4,21 @@ import { env } from '../../config/env.js';
 import { bruteForceProtector, logSecurityEvent } from '../../middleware/security.js';
 
 export class AuthController {
-  private setCookies(res: Response, accessToken: string, refreshToken: string): void {
+  private setCookies(res: Response, accessToken: string, refreshToken: string, req?: Request): void {
+    const isHttps = req ? (req.secure || req.headers['x-forwarded-proto'] === 'https') : false;
     const isProd = env.NODE_ENV === 'production';
+    const useSecureCookie = isProd && isHttps;
 
     res.cookie('cpet_token', accessToken, {
       httpOnly: true,
-      secure: isProd,
+      secure: useSecureCookie,
       sameSite: 'lax',
       maxAge: 15 * 60 * 1000, // 15 mins
     });
 
     res.cookie('cpet_refresh_token', refreshToken, {
       httpOnly: true,
-      secure: isProd,
+      secure: useSecureCookie,
       sameSite: 'lax',
       path: '/api/v1/auth/refresh',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
@@ -26,7 +28,7 @@ export class AuthController {
   public registerCitizen = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const result = await authService.registerCitizen(req.body);
-      this.setCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
+      this.setCookies(res, result.tokens.accessToken, result.tokens.refreshToken, req);
       res.status(201).json({
         success: true,
         data: result,
@@ -39,7 +41,7 @@ export class AuthController {
   public registerOrganization = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const result = await authService.registerOrganization(req.body);
-      this.setCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
+      this.setCookies(res, result.tokens.accessToken, result.tokens.refreshToken, req);
       res.status(201).json({
         success: true,
         data: result,
@@ -74,7 +76,7 @@ export class AuthController {
       const ip = req.ip;
       const result = await authService.login(req.body.email, req.body.password, userAgent, ip);
       bruteForceProtector.recordSuccess(targetKey);
-      this.setCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
+      this.setCookies(res, result.tokens.accessToken, result.tokens.refreshToken, req);
       res.status(200).json({
         success: true,
         data: result,
@@ -96,6 +98,7 @@ export class AuthController {
       res.status(200).json({
         success: true,
         message: result.message,
+        devOtp: result.devOtp,
       });
     } catch (error) {
       next(error);
@@ -113,6 +116,7 @@ export class AuthController {
       res.status(200).json({
         success: true,
         message: result.message,
+        devOtp: result.devOtp,
       });
     } catch (error) {
       next(error);
@@ -187,6 +191,36 @@ export class AuthController {
       res.status(200).json({
         success: true,
         message: 'Signed out successfully.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public resetPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const target = (req.body.target || req.body.email || '').toLowerCase().trim();
+    const { otp, newPassword } = req.body;
+
+    try {
+      const result = await authService.resetPassword(target, otp, newPassword);
+      res.status(200).json({
+        success: true,
+        message: result.message,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public socialLogin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userAgent = req.headers['user-agent'];
+      const ip = req.ip;
+      const result = await authService.socialLogin(req.body, userAgent, ip);
+      this.setCookies(res, result.tokens.accessToken, result.tokens.refreshToken, req);
+      res.status(200).json({
+        success: true,
+        data: result,
       });
     } catch (error) {
       next(error);

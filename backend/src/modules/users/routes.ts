@@ -34,18 +34,24 @@ usersRouter.get('/me', async (req: Request, res: Response, next: NextFunction) =
       }
     }
 
+    const userId = (user._id || user.id || '').toString();
+    const orgId = user.organizationId ? user.organizationId.toString() : null;
+    const orgName = user.organizationName || organization?.name || (user.organization && user.organization.name) || null;
+
     res.status(200).json({
       success: true,
       data: {
-        id: user._id.toString(),
+        id: userId,
+        _id: userId,
         name: user.name,
         email: user.email,
         phone: user.phone,
         role: user.role,
-        organizationId: user.organizationId ? user.organizationId.toString() : null,
-        organization,
-        isEmailVerified: user.isEmailVerified,
-        isPhoneVerified: user.isPhoneVerified,
+        organizationId: orgId,
+        organizationName: orgName,
+        organization: organization || (user.organization ? user.organization : null),
+        isEmailVerified: !!user.isEmailVerified,
+        isPhoneVerified: !!user.isPhoneVerified,
         consent: user.consent,
         createdAt: user.createdAt,
       },

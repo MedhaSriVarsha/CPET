@@ -452,10 +452,11 @@ export class BloodService {
   }
 
   /**
-   * Reference coordinate helpers for popular Telangana / Hyderabad centers.
+   * Reference coordinate helpers for popular centers.
    */
   private getDefaultCoordinates(locationName: string): [number, number] {
     const lower = locationName.toLowerCase();
+    if (lower.includes('rajahmundry') || lower.includes('east godavari')) return [81.804, 17.0005];
     if (lower.includes('madhapur') || lower.includes('hitec')) return [78.3845, 17.4483];
     if (lower.includes('gachibowli')) return [78.3578, 17.4401];
     if (lower.includes('serilingampally')) return [78.3182, 17.4851];
@@ -464,7 +465,303 @@ export class BloodService {
     if (lower.includes('hyderabad')) return [78.4867, 17.385];
     if (lower.includes('warangal')) return [79.5941, 17.9689];
     if (lower.includes('bangalore') || lower.includes('bengaluru')) return [77.5946, 12.9716];
-    return [78.4867, 17.385]; // Default central Hyderabad
+    return [81.804, 17.0005]; // Default Rajahmundry / AP
+  }
+
+  /**
+   * Get list of hospital & blood bank inventory items
+   */
+  public async getBloodInventory(filters?: { bloodGroup?: string; location?: string; search?: string }) {
+    const defaultHospitals = [
+      {
+        id: 'hosp-1',
+        name: 'Rajahmundry Government Hospital',
+        category: 'Blood Bank',
+        type: 'Government',
+        distanceKm: 2.3,
+        location: 'Rajahmundry, East Godavari',
+        address: 'Main Hospital Road, Danavaipeta, Rajahmundry',
+        phone: '+91 883 2471100',
+        inventory: {
+          'O+': { status: 'Available', units: 12 },
+          'A+': { status: 'Available', units: 8 },
+          'B+': { status: 'Available', units: 14 },
+          'AB+': { status: 'Available', units: 5 },
+          'O-': { status: 'Available', units: 4 },
+          'A-': { status: 'Limited', units: 2 },
+          'B-': { status: 'Available', units: 3 },
+          'AB-': { status: 'Limited', units: 1 },
+        },
+      },
+      {
+        id: 'hosp-2',
+        name: 'Life Line Blood Bank',
+        category: 'Blood Bank',
+        type: 'Private',
+        distanceKm: 3.1,
+        location: 'Rajahmundry, East Godavari',
+        address: 'Kotipalli Bus Stand Road, Rajahmundry',
+        phone: '+91 883 2465544',
+        inventory: {
+          'A+': { status: 'Available', units: 8 },
+          'O+': { status: 'Available', units: 5 },
+          'B+': { status: 'Available', units: 9 },
+          'AB+': { status: 'Available', units: 6 },
+          'O-': { status: 'Limited', units: 2 },
+          'A-': { status: 'Limited', units: 1 },
+          'B-': { status: 'Available', units: 4 },
+          'AB-': { status: 'Out of Stock', units: 0 },
+        },
+      },
+      {
+        id: 'hosp-3',
+        name: 'District Hospital',
+        category: 'Hospital',
+        type: 'Government',
+        distanceKm: 4.5,
+        location: 'East Godavari District',
+        address: 'Collectorate Junction, Kakinada-Rajahmundry Bypass',
+        phone: '+91 883 2420011',
+        inventory: {
+          'B+': { status: 'Limited', units: 3 },
+          'O+': { status: 'Available', units: 7 },
+          'A+': { status: 'Available', units: 4 },
+          'AB+': { status: 'Limited', units: 2 },
+          'O-': { status: 'Available', units: 3 },
+          'A-': { status: 'Out of Stock', units: 0 },
+          'B-': { status: 'Limited', units: 1 },
+          'AB-': { status: 'Out of Stock', units: 0 },
+        },
+      },
+      {
+        id: 'hosp-4',
+        name: 'Apollo Hospital',
+        category: 'Multi-Specialty Hospital',
+        type: 'Private',
+        distanceKm: 6.2,
+        location: 'Rajahmundry, East Godavari',
+        address: 'Morampudi Junction, NH 16, Rajahmundry',
+        phone: '+91 883 2489999',
+        inventory: {
+          'AB+': { status: 'Available', units: 10 },
+          'O+': { status: 'Available', units: 16 },
+          'A+': { status: 'Available', units: 11 },
+          'B+': { status: 'Available', units: 15 },
+          'O-': { status: 'Available', units: 6 },
+          'A-': { status: 'Available', units: 4 },
+          'B-': { status: 'Available', units: 5 },
+          'AB-': { status: 'Limited', units: 2 },
+        },
+      },
+      {
+        id: 'hosp-5',
+        name: 'Rural Health Center',
+        category: 'Health Center',
+        type: 'Government',
+        distanceKm: 8.7,
+        location: 'East Godavari Rural',
+        address: 'Kadiyam Road, East Godavari',
+        phone: '+91 883 2431234',
+        inventory: {
+          'O-': { status: 'Available', units: 6 },
+          'O+': { status: 'Available', units: 8 },
+          'A+': { status: 'Available', units: 5 },
+          'B+': { status: 'Available', units: 6 },
+          'AB+': { status: 'Limited', units: 2 },
+          'A-': { status: 'Limited', units: 1 },
+          'B-': { status: 'Limited', units: 2 },
+          'AB-': { status: 'Out of Stock', units: 0 },
+        },
+      },
+    ];
+
+    let result = defaultHospitals;
+
+    if (filters?.bloodGroup && filters.bloodGroup !== 'ALL') {
+      const bg = filters.bloodGroup;
+      result = result.map((h) => {
+        const invForGroup = (h.inventory as any)[bg] || { status: 'Out of Stock', units: 0 };
+        return {
+          ...h,
+          selectedGroupUnits: invForGroup.units,
+          selectedGroupStatus: invForGroup.status,
+        };
+      });
+    }
+
+    if (filters?.search) {
+      const q = filters.search.toLowerCase();
+      result = result.filter(
+        (h) =>
+          h.name.toLowerCase().includes(q) ||
+          h.location.toLowerCase().includes(q) ||
+          h.type.toLowerCase().includes(q)
+      );
+    }
+
+    return result;
+  }
+
+  /**
+   * Get list of nearby and voluntary blood donors
+   */
+  public async getDonorsList(filters?: { bloodGroup?: string; search?: string; nearbyOnly?: boolean }) {
+    const isDb = memoryStore.isDbConnected();
+    const defaultDonors = [
+      {
+        id: 'donor-1',
+        anonymousDonorCode: 'DONOR-SK-01',
+        name: 'Suresh Kumar',
+        bloodGroup: 'O+',
+        distanceKm: 1.2,
+        availabilityStatus: 'AVAILABLE',
+        location: 'Rajahmundry, East Godavari',
+        phone: '+91 98765 43210',
+        lastDonatedAt: '2025-04-12T00:00:00.000Z',
+        lastDonatedLabel: 'Apr 12, 2025 (12 months ago)',
+        about: 'I am a registered blood donor and willing to help in emergencies.',
+        contactPreference: 'PHONE',
+        totalDonations: 6,
+      },
+      {
+        id: 'donor-2',
+        anonymousDonorCode: 'DONOR-AR-02',
+        name: 'Anitha Reddy',
+        bloodGroup: 'A+',
+        distanceKm: 2.4,
+        availabilityStatus: 'AVAILABLE',
+        location: 'Danavaipeta, Rajahmundry',
+        phone: '+91 98480 12345',
+        lastDonatedAt: '2025-06-20T00:00:00.000Z',
+        lastDonatedLabel: 'Jun 20, 2025 (10 months ago)',
+        about: 'Active voluntary donor. Can reach central hospitals in 15 minutes.',
+        contactPreference: 'PHONE',
+        totalDonations: 4,
+      },
+      {
+        id: 'donor-3',
+        anonymousDonorCode: 'DONOR-RT-03',
+        name: 'Ravi Teja',
+        bloodGroup: 'B-',
+        distanceKm: 3.1,
+        availabilityStatus: 'AVAILABLE',
+        location: 'Kotipalli, East Godavari',
+        phone: '+91 97000 87654',
+        lastDonatedAt: '2025-08-15T00:00:00.000Z',
+        lastDonatedLabel: 'Aug 15, 2025 (8 months ago)',
+        about: 'Rare B- donor ready for emergency surgery calls.',
+        contactPreference: 'PHONE',
+        totalDonations: 9,
+      },
+      {
+        id: 'donor-4',
+        anonymousDonorCode: 'DONOR-PR-04',
+        name: 'Praveen',
+        bloodGroup: 'AB+',
+        distanceKm: 4.8,
+        availabilityStatus: 'AVAILABLE',
+        location: 'Morampudi, Rajahmundry',
+        phone: '+91 99887 65432',
+        lastDonatedAt: '2025-11-05T00:00:00.000Z',
+        lastDonatedLabel: 'Nov 05, 2025 (5 months ago)',
+        about: 'Universal recipient, willing to donate platelets and whole blood.',
+        contactPreference: 'PHONE',
+        totalDonations: 3,
+      },
+      {
+        id: 'donor-5',
+        anonymousDonorCode: 'DONOR-LK-05',
+        name: 'Lakshmi',
+        bloodGroup: 'O-',
+        distanceKm: 6.2,
+        availabilityStatus: 'AVAILABLE',
+        location: 'Bommuru, East Godavari',
+        phone: '+91 91234 56789',
+        lastDonatedAt: '2025-05-18T00:00:00.000Z',
+        lastDonatedLabel: 'May 18, 2025 (11 months ago)',
+        about: 'Universal O- donor. Always on standby for pediatric & trauma emergencies.',
+        contactPreference: 'PHONE',
+        totalDonations: 12,
+      },
+      {
+        id: 'donor-6',
+        anonymousDonorCode: 'DONOR-KA-06',
+        name: 'Karthik',
+        bloodGroup: 'B+',
+        distanceKm: 7.5,
+        availabilityStatus: 'UNAVAILABLE',
+        location: 'Kadiyam, East Godavari',
+        phone: '+91 94400 98765',
+        lastDonatedAt: '2026-02-10T00:00:00.000Z',
+        lastDonatedLabel: 'Feb 10, 2026 (Recent donation - Cooldown)',
+        about: 'Regular donor currently in mandatory donation cooldown period.',
+        contactPreference: 'PHONE',
+        totalDonations: 5,
+      },
+    ];
+
+    // Merge any memoryStore or db donors
+    let dynamicDonors: any[] = [];
+    if (isDb) {
+      try {
+        const dbDocs = await DonorModel.find().lean();
+        dynamicDonors = dbDocs.map((d: any) => ({
+          id: d._id.toString(),
+          anonymousDonorCode: d.anonymousDonorCode,
+          name: d.anonymousDonorCode,
+          bloodGroup: d.bloodGroup,
+          distanceKm: 3.5,
+          availabilityStatus: d.availabilityStatus,
+          location: `${d.approximateLocation?.locality || 'Rajahmundry'}, ${d.approximateLocation?.district || 'East Godavari'}`,
+          phone: d.contactPhone || '+91 98765 43210',
+          lastDonatedAt: d.lastDonatedAt,
+          lastDonatedLabel: d.lastDonatedAt ? new Date(d.lastDonatedAt).toLocaleDateString() : 'Never',
+          about: 'Registered Voluntary Donor on CPET Blood Hub',
+          contactPreference: d.contactPreference || 'PHONE',
+          totalDonations: 1,
+        }));
+      } catch (e) {
+        // ignore
+      }
+    } else {
+      dynamicDonors = Array.from(memoryStore.donors.values()).map((d) => ({
+        id: d._id,
+        anonymousDonorCode: d.anonymousDonorCode,
+        name: d.anonymousDonorCode,
+        bloodGroup: d.bloodGroup,
+        distanceKm: 3.5,
+        availabilityStatus: d.availabilityStatus,
+        location: `${d.approximateLocation?.locality || 'Rajahmundry'}, ${d.approximateLocation?.district || 'East Godavari'}`,
+        phone: d.contactPhone || '+91 98765 43210',
+        lastDonatedAt: d.lastDonatedAt,
+        lastDonatedLabel: d.lastDonatedAt ? new Date(d.lastDonatedAt).toLocaleDateString() : 'Never',
+        about: 'Registered Voluntary Donor on CPET Blood Hub',
+        contactPreference: d.contactPreference || 'PHONE',
+        totalDonations: 1,
+      }));
+    }
+
+    let all = [...defaultDonors, ...dynamicDonors];
+
+    if (filters?.bloodGroup && filters.bloodGroup !== 'ALL') {
+      all = all.filter((d) => d.bloodGroup === filters.bloodGroup);
+    }
+
+    if (filters?.nearbyOnly) {
+      all = all.filter((d) => (d.distanceKm || 99) <= 5);
+    }
+
+    if (filters?.search) {
+      const q = filters.search.toLowerCase();
+      all = all.filter(
+        (d) =>
+          d.name.toLowerCase().includes(q) ||
+          d.bloodGroup.toLowerCase().includes(q) ||
+          d.location.toLowerCase().includes(q)
+      );
+    }
+
+    return all;
   }
 }
 

@@ -9,6 +9,7 @@ import {
 } from '@cpet/database';
 import { memoryStore } from '../../infrastructure/store.js';
 import { slaService } from '../sla/sla.service.js';
+import { smsNotificationService } from '../notifications/sms.service.js';
 import { socketManager } from '../../infrastructure/socket.js';
 import { logger } from '../../utils/logger.js';
 
@@ -163,6 +164,20 @@ export class EscalationService {
         message: `Your request has been escalated to ${nextTier.tierName} for immediate resolution.`,
         isRead: false,
       });
+
+      // Dispatch Urgent SMS to Citizen
+      const requesterPhone = (targetCase as any).requesterPhone || '+91 94940 12345';
+      await smsNotificationService.dispatchStatusChangeSms({
+        caseId: targetCase._id.toString(),
+        referenceNumber: targetCase.referenceNumber,
+        recipientPhone: requesterPhone,
+        recipientName: (targetCase as any).requesterName || 'Citizen',
+        requesterId: targetCase.requesterId?.toString(),
+        previousStatus,
+        newStatus: 'ESCALATED',
+        orgName: (targetCase as any).organizationName || 'Assigned Authority',
+        actionSummary: `Escalated to ${nextTier.tierName} (${escalationRecord.reason})`,
+      });
     } else {
       targetCase.status = 'ESCALATED';
       targetCase.sla.isEscalated = true;
@@ -211,6 +226,20 @@ export class EscalationService {
         isRead: false,
         createdAt: new Date(),
         updatedAt: new Date(),
+      });
+
+      // Dispatch Urgent SMS to Citizen
+      const requesterPhone = targetCase.requesterPhone || '+91 94940 12345';
+      await smsNotificationService.dispatchStatusChangeSms({
+        caseId,
+        referenceNumber: targetCase.referenceNumber,
+        recipientPhone: requesterPhone,
+        recipientName: targetCase.requesterName || 'Citizen',
+        requesterId: targetCase.requesterId,
+        previousStatus,
+        newStatus: 'ESCALATED',
+        orgName: targetCase.organizationName || 'Assigned Authority',
+        actionSummary: `Escalated to ${nextTier.tierName} (${escalationRecord.reason})`,
       });
     }
 

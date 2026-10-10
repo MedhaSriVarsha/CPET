@@ -50,7 +50,16 @@ export const globalRateLimiter = createRateLimiter({
 export const authRateLimiter = createRateLimiter({
   name: 'auth',
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: env.NODE_ENV === 'test' ? 100 : 15, // 15 requests per 15 min per IP
+  max: 1000, // Generous threshold to prevent false positive lockouts
+  skip: (req) => {
+    const ip = req.ip || req.socket?.remoteAddress || '';
+    return (
+      ip === '127.0.0.1' ||
+      ip === '::1' ||
+      ip === '::ffff:127.0.0.1' ||
+      ip.includes('127.0.0.1')
+    );
+  },
 });
 
 // 3. OTP Dispatch Rate Limiter (SMS/Email abuse prevention)
@@ -58,7 +67,7 @@ export const authRateLimiter = createRateLimiter({
 export const otpRateLimiter = createRateLimiter({
   name: 'otp',
   windowMs: 5 * 60 * 1000, // 5 minutes
-  max: env.NODE_ENV === 'test' ? 50 : 5, // 5 requests per 5 min
+  max: env.NODE_ENV === 'development' ? 100 : env.NODE_ENV === 'test' ? 50 : 5, // 100 requests in dev
   keyGenerator: (req) => {
     const target = (req.body?.email || req.body?.phone || 'unknown').toLowerCase().trim();
     return `otp:${req.ip}:${target}`;

@@ -219,11 +219,21 @@ export class AiService {
     let priority: CasePriority = prevContext.priority || 'MEDIUM';
 
     // 1. Identify Brand / Organization mention dynamically from registered organizations
+    const hasWord = (str: string, term: string) => {
+      const trimmed = term.trim().toLowerCase();
+      if (!trimmed) return false;
+      if (trimmed.length <= 3) {
+        const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(`\\b${escaped}\\b`, 'i').test(str);
+      }
+      return str.toLowerCase().includes(trimmed);
+    };
+
     const registeredOrgs = Array.from(memoryStore.organizations.values());
     for (const org of registeredOrgs) {
-      const matchBrand = org.brandName && t.includes(org.brandName.toLowerCase());
-      const matchName = org.name && t.includes(org.name.toLowerCase());
-      const matchAlias = org.aliases && org.aliases.some((a) => t.includes(a.toLowerCase()));
+      const matchBrand = org.brandName && hasWord(t, org.brandName);
+      const matchName = org.name && hasWord(t, org.name);
+      const matchAlias = org.aliases && org.aliases.some((a) => hasWord(t, a));
       if (matchBrand || matchName || matchAlias) {
         rawOrgName = org.brandName || org.name;
         break;
@@ -241,10 +251,32 @@ export class AiService {
         'blue star': 'Blue Star',
         panasonic: 'Panasonic',
         lloyd: 'Lloyd',
+        godrej: 'Godrej',
+        airtel: 'Airtel Broadband & Network Ops',
+        jio: 'Jio Fiber & Mobile Network',
+        'act fiber': 'ACT Fibernet Broadband',
+        apdcl: 'Andhra Pradesh Eastern Power (APDCL)',
+        epdcl: 'Andhra Pradesh Eastern Power (APDCL)',
+        gvmc: 'Municipal Corporation Water Board',
+        sbi: 'State Bank of India (SBI)',
+        'state bank': 'State Bank of India (SBI)',
+        hdfc: 'HDFC Bank Customer Care',
+        icici: 'ICICI Bank Nodal Office',
+        axis: 'Axis Bank Grievance Redressal',
+        kotak: 'Kotak Mahindra Bank',
+        pnb: 'Punjab National Bank (PNB)',
+        'bank of baroda': 'Bank of Baroda (BOB)',
+        canara: 'Canara Bank',
+        'union bank': 'Union Bank of India',
+        'indian bank': 'Indian Bank',
+        indusind: 'IndusInd Bank',
+        'yes bank': 'Yes Bank',
+        idbi: 'IDBI Bank',
+        federal: 'Federal Bank',
         apex: 'Apex Power & Water',
       };
       for (const [pattern, brandName] of Object.entries(fallbackBrands)) {
-        if (t.includes(pattern)) {
+        if (hasWord(t, pattern)) {
           rawOrgName = brandName;
           break;
         }
@@ -258,16 +290,33 @@ export class AiService {
     } else if (t.includes('fridge') || t.includes('refrigerator') || t.includes('फ्रिज') || t.includes('ఫ్రిజ్')) {
       productService = `${rawOrgName || 'Home'} Refrigerator`;
       category = 'Consumer Appliance & Utilities';
-    } else if (t.includes('transformer') || t.includes('power') || t.includes('electricity') || t.includes('voltage')) {
+    } else if (t.includes('transformer') || t.includes('power') || t.includes('electricity') || t.includes('voltage') || t.includes('apdcl')) {
       productService = 'Electric Distribution Line';
       category = 'Public Utilities';
       priority = 'HIGH';
-    } else if (t.includes('water') || t.includes('pipe') || t.includes('meter')) {
+      if (!rawOrgName) {
+        rawOrgName = 'Apex Power & Water';
+      }
+    } else if (t.includes('water') || t.includes('pipe') || t.includes('meter') || t.includes('drainage')) {
       productService = 'Municipal Water Pipeline';
       category = 'Public Utilities';
     } else if (t.includes('washing') || t.includes('washer')) {
       productService = `${rawOrgName || 'Automatic'} Washing Machine`;
       category = 'Consumer Appliance & Utilities';
+    } else if (t.includes('wifi') || t.includes('broadband') || t.includes('internet') || t.includes('fiber') || t.includes('airtel') || t.includes('jio')) {
+      productService = 'Broadband & Optical Fiber Line';
+      category = 'Telecommunications';
+    } else if (t.includes('atm') || t.includes('cash') || t.includes('dispense')) {
+      productService = 'ATM Cash Dispense & Switch Facility';
+      category = 'Banking & Financial Services';
+      priority = 'HIGH';
+    } else if (t.includes('upi') || t.includes('transaction') || t.includes('fraud') || t.includes('unauthorized') || t.includes('debited')) {
+      productService = 'UPI & Digital Payment Gateway';
+      category = 'Banking & Financial Services';
+      priority = 'HIGH';
+    } else if (t.includes('bank') || t.includes('account') || t.includes('cheque') || t.includes('loan') || t.includes('card') || t.includes('sbi') || t.includes('hdfc') || t.includes('icici')) {
+      productService = `${rawOrgName || 'Bank'} Retail Banking & Account Service`;
+      category = 'Banking & Financial Services';
     }
 
     // 3. Domain Specific Structured Extraction

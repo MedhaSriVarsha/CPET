@@ -6,19 +6,23 @@ import { logger } from '../utils/logger.js';
 import { ValidationError } from '../utils/errors.js';
 
 export function setupHelmet(): RequestHandler {
+  const isDev = env.NODE_ENV === 'development';
+
   return helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'blob:'],
-        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-        connectSrc: ["'self'", 'ws:', 'wss:'],
-        objectSrc: ["'none'"],
-        frameAncestors: ["'none'"],
-      },
-    },
+    contentSecurityPolicy: isDev
+      ? false
+      : {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+            styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+            imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+            fontSrc: ["'self'", 'https://fonts.gstatic.com', 'https://fonts.googleapis.com'],
+            connectSrc: ["'self'", 'ws:', 'wss:', 'http:', 'https:'],
+            objectSrc: ["'none'"],
+            frameAncestors: ["'none'"],
+          },
+        },
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     hsts: {

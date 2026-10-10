@@ -104,8 +104,52 @@ bloodRouter.get('/search', async (req: Request, res: Response) => {
   }
 });
 
-// 2. Register voluntary blood donor (authenticated)
-bloodRouter.post('/donors/register', authenticate, async (req: Request, res: Response) => {
+// 2. Get all voluntary blood donors (with search, bloodGroup, and nearby filters)
+bloodRouter.get('/donors', async (req: Request, res: Response) => {
+  try {
+    const bloodGroup = req.query.bloodGroup as string;
+    const search = req.query.search as string;
+    const nearbyOnly = req.query.nearbyOnly === 'true';
+
+    const donors = await bloodService.getDonorsList({
+      bloodGroup: bloodGroup && bloodGroup !== 'ALL' ? bloodGroup : undefined,
+      search,
+      nearbyOnly,
+    });
+
+    return res.json({ success: true, data: donors });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: err.message },
+    });
+  }
+});
+
+// 3. Get hospital and blood bank inventory
+bloodRouter.get('/inventory', async (req: Request, res: Response) => {
+  try {
+    const bloodGroup = req.query.bloodGroup as string;
+    const location = req.query.location as string;
+    const search = req.query.search as string;
+
+    const inventory = await bloodService.getBloodInventory({
+      bloodGroup: bloodGroup && bloodGroup !== 'ALL' ? bloodGroup : undefined,
+      location,
+      search,
+    });
+
+    return res.json({ success: true, data: inventory });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: err.message },
+    });
+  }
+});
+
+// 4. Register voluntary blood donor
+bloodRouter.post('/donors/register', async (req: Request, res: Response) => {
   try {
     const validated = registerDonorSchema.parse(req.body);
     const result = await bloodService.registerDonor(validated, req.user?.userId);
@@ -123,7 +167,7 @@ bloodRouter.post('/donors/register', authenticate, async (req: Request, res: Res
   }
 });
 
-// 3. Get authenticated user's donor profile
+// 5. Get authenticated user's donor profile
 bloodRouter.get('/donors/me', authenticate, async (req: Request, res: Response) => {
   try {
     const profile = await bloodService.getDonorProfileByUserId(req.user!.userId);
@@ -136,7 +180,7 @@ bloodRouter.get('/donors/me', authenticate, async (req: Request, res: Response) 
   }
 });
 
-// 4. Update availability status
+// 6. Update availability status
 bloodRouter.put('/donors/status', authenticate, async (req: Request, res: Response) => {
   try {
     const { status } = req.body;
@@ -157,11 +201,16 @@ bloodRouter.put('/donors/status', authenticate, async (req: Request, res: Respon
   }
 });
 
-// 5. Safe contact / alert relay to donor
-bloodRouter.post('/contact', authenticate, async (req: Request, res: Response) => {
+// 7. Safe contact / alert relay to donor
+bloodRouter.post('/contact', async (req: Request, res: Response) => {
   try {
     const validated = contactDonorSchema.parse(req.body);
-    const result = await bloodService.contactDonorRelay(validated, req.user!);
+    const user = req.user || {
+      userId: 'guest-citizen',
+      name: 'Citizen Requester',
+      phone: validated.attendantPhone,
+    };
+    const result = await bloodService.contactDonorRelay(validated, user as any);
 
     return res.json({ success: true, data: result });
   } catch (err: any) {
@@ -171,3 +220,4 @@ bloodRouter.post('/contact', authenticate, async (req: Request, res: Response) =
     });
   }
 });
+

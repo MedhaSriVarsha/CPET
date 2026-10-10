@@ -64,16 +64,68 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
     }
 
     req.user = {
+      _id: user._id.toString(),
       userId: user._id.toString(),
       name: user.name,
       email: user.email,
+      phone: user.phone,
       role: user.role,
       organizationId: user.organizationId ? user.organizationId.toString() : null,
-    };
+      organizationName: user.organizationName,
+    } as any;
 
     next();
   } catch (error) {
     next(error);
+  }
+}
+
+/**
+ * Optional authentication middleware: populates req.user if token is present, but allows guests
+ */
+export async function optionalAuthenticate(req: Request, _res: Response, next: NextFunction): Promise<void> {
+  try {
+    let token: string | undefined;
+
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.cookies && req.cookies.cpet_token) {
+      token = req.cookies.cpet_token;
+    }
+
+    if (!token) {
+      return next();
+    }
+
+    try {
+      const decoded = jwt.verify(token, env.JWT_SECRET) as AuthJwtPayload;
+      let user: any;
+      if (memoryStore.isDbConnected() || Boolean((UserModel.findById as any)?._isMockFunction)) {
+        user = await UserModel.findById(decoded.userId).lean();
+      } else {
+        user = memoryStore.users.get(decoded.userId);
+      }
+
+      if (user && user.isActive && !user.isDeleted) {
+        req.user = {
+          _id: user._id.toString(),
+          userId: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          organizationId: user.organizationId ? user.organizationId.toString() : null,
+          organizationName: user.organizationName,
+        } as any;
+      }
+    } catch {
+      // Ignore invalid token in optional authentication
+    }
+
+    next();
+  } catch {
+    next();
   }
 }
 

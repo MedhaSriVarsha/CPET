@@ -17,6 +17,13 @@ export class SMTPEmailProvider implements EmailProvider {
       }
 
       if (!env.SMTP_HOST) {
+        if (env.NODE_ENV === 'development') {
+          logger.info('[SMTPEmailProvider] SMTP_HOST not set in dev; using console mock email logger.');
+          this.transporter = nodemailer.createTransport({
+            jsonTransport: true,
+          });
+          return this.transporter;
+        }
         logger.error('[SMTPEmailProvider] SMTP_HOST is not configured in environment.');
         throw new ServiceUnavailableError(
           'Email service is temporarily unavailable. Please verify SMTP configuration.'
@@ -130,6 +137,12 @@ export class SMTPEmailProvider implements EmailProvider {
 </body>
 </html>
     `.trim();
+
+    if (env.NODE_ENV === 'development' || !env.SMTP_HOST) {
+      logger.info(
+        `\n==================================================\n[DEV OTP DISPATCH]\nRecipient: ${options.to}\nOTP Code:  ${options.otp}\nPurpose:   ${options.purpose}\n==================================================\n`
+      );
+    }
 
     return this.sendEmail({
       to: options.to,

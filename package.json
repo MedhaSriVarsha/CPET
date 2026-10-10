@@ -9,7 +9,7 @@
     "frontend"
   ],
   "scripts": {
-    "dev": "npm run dev:backend & npm run dev:frontend",
+    "dev": "concurrently -k -p \"[{name}]\" -n \"backend,frontend\" -c \"cyan.bold,magenta.bold\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
     "build": "npm run build --workspace=database && npm run build --workspace=backend && npm run build --workspace=frontend",
@@ -24,5 +24,8 @@
     "enterprise"
   ],
   "author": "",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
 }

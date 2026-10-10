@@ -12,6 +12,23 @@ export function errorHandler(
 ): void {
   const correlationId = req.correlationId || 'unknown';
 
+  if (err instanceof SyntaxError && 'body' in err) {
+    logger.warn(`Malformed JSON payload in request: ${err.message}`, {
+      correlationId,
+      path: req.originalUrl,
+      method: req.method,
+    });
+
+    res.status(400).json({
+      error: {
+        code: 'BAD_REQUEST',
+        message: 'Malformed JSON payload in request body',
+        correlationId,
+      },
+    });
+    return;
+  }
+
   if (err instanceof ZodError) {
     const message = err.errors.map((e) => e.message).join(', ') || 'Validation error';
     logger.warn(`Validation error: ${message}`, {

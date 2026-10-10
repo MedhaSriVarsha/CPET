@@ -1,0 +1,44 @@
+# ============================================================================
+# CPET Environment Configuration (.env)
+# ============================================================================
+NODE_ENV=production
+PORT=5000
+HOST=0.0.0.0
+
+# Database
+# For local dev: mongodb://localhost:27017/cpet
+# For cloud/production: mongodb+srv://<user>:<password>@<cluster>.mongodb.net/cpet?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://cpetorg1_db_user:aYkFzHkVxDHXjmOZ@cpetcluster.k7mr7ez.mongodb.net/?appName=CPETcluster
+
+# Redis & BullMQ (Optional in dev: system uses in-memory fallback if Redis is offline)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+# Security & CORS
+CORS_ORIGIN=http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:3000
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=1000
+
+# Authentication & Session Secrets (Must be at least 32 characters in production)
+JWT_SECRET=wqY55bzV921j2igo3ZgZPWPhlawEjgZrpeIr+i8b2eXsNrQH7CAoySAYqJpPEeiM
+JWT_EXPIRES_IN=15m
+REFRESH_TOKEN_SECRET=GXTw7dboZCJnRKyfFiinyOnRtS/sCXSnv8uoPRbrKppoSjAYWSWGhkEn82/0EIUN
+REFRESH_TOKEN_EXPIRES_IN=7d
+COOKIE_SECRET=ZDaC5e5LwJh//THG2nu7yi5wzDfGNMvNiXvOwLEE/QON78BICzQI86N87WyV2IIF
+
+# Optional: Vercel Cron Secret (for /api/v1/sla/sweep-cron)
+CRON_SECRET=
+
+# Logging
+LOG_LEVEL=info
+
+# SMTP Email Configuration for Real OTP Delivery
+# Leave empty for simulated/dev mode or fill in your SMTP provider (e.g. Gmail App Password, Resend, Sendgrid)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=CPETORG1@gmail.com
+SMTP_PASSWORD=pnnskptlxdkvmuhi
+SMTP_FROM=CPETORG1@gmail.com
+SMTP_FROM_NAME=CPET

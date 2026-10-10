@@ -44,7 +44,7 @@ export const orgSignupSchema = {
 
 export const loginSchema = {
   body: z.object({
-    email: z.string().email('Valid email required'),
+    email: z.string().min(1, 'Email or mobile number is required'),
     password: z.string().min(1, 'Password is required'),
   }),
 };
@@ -57,43 +57,62 @@ export const otpPurposeEnum = z.enum([
   'EMAIL_VERIFICATION',
 ]);
 
+const isValidEmailOrPhone = (val?: string) => {
+  if (!val) return false;
+  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
+  const isPhone = /^(\+?[0-9\s\-()]{7,20})$/.test(val.trim());
+  return isEmail || isPhone;
+};
+
 export const otpRequestSchema = {
   body: z
     .object({
-      target: z.string().optional(),
-      email: z.string().email('Valid email required').optional(),
+      target: z.string().min(1, 'Mobile number or email is required').optional(),
+      email: z.string().min(1, 'Mobile number or email is required').optional(),
       purpose: otpPurposeEnum,
     })
     .refine((data) => Boolean(data.target || data.email), {
-      message: 'Email or target is required',
+      message: 'Email or mobile number is required',
       path: ['target'],
+    })
+    .refine((data) => isValidEmailOrPhone(data.target || data.email), {
+      message: 'Valid email address or mobile number required',
+      path: ['email'],
     }),
 };
 
 export const otpVerifySchema = {
   body: z
     .object({
-      target: z.string().optional(),
-      email: z.string().email('Valid email required').optional(),
+      target: z.string().min(1, 'Mobile number or email is required').optional(),
+      email: z.string().min(1, 'Mobile number or email is required').optional(),
       otp: z.string().regex(/^\d{6}$/, 'OTP must be exactly 6 digits'),
       purpose: otpPurposeEnum,
     })
     .refine((data) => Boolean(data.target || data.email), {
-      message: 'Email or target is required',
+      message: 'Email or mobile number is required',
       path: ['target'],
+    })
+    .refine((data) => isValidEmailOrPhone(data.target || data.email), {
+      message: 'Valid email address or mobile number required',
+      path: ['email'],
     }),
 };
 
 export const otpResendSchema = {
   body: z
     .object({
-      target: z.string().optional(),
-      email: z.string().email('Valid email required').optional(),
+      target: z.string().min(1, 'Mobile number or email is required').optional(),
+      email: z.string().min(1, 'Mobile number or email is required').optional(),
       purpose: otpPurposeEnum,
     })
     .refine((data) => Boolean(data.target || data.email), {
-      message: 'Email or target is required',
+      message: 'Email or mobile number is required',
       path: ['target'],
+    })
+    .refine((data) => isValidEmailOrPhone(data.target || data.email), {
+      message: 'Valid email address or mobile number required',
+      path: ['email'],
     }),
 };
 
@@ -107,5 +126,28 @@ export const updateProfileSchema = {
   body: z.object({
     name: z.string().min(2).optional(),
     phone: z.string().optional(),
+  }),
+};
+
+export const resetPasswordSchema = {
+  body: z.object({
+    target: z.string().min(1, 'Email or mobile number is required').optional(),
+    email: z.string().min(1, 'Email or mobile number is required').optional(),
+    otp: z.string().regex(/^\d{6}$/, 'OTP must be exactly 6 digits'),
+    newPassword: z.string().min(8, 'New password must be at least 8 characters long'),
+  }).refine((data) => Boolean(data.target || data.email), {
+    message: 'Email or mobile number is required',
+    path: ['target'],
+  }),
+};
+
+export const socialAuthSchema = {
+  body: z.object({
+    provider: z.enum(['GOOGLE', 'APPLE']),
+    email: z.string().email('Valid email address required'),
+    name: z.string().min(1, 'Name is required'),
+    role: z.enum(['CITIZEN', 'ORGANIZATION_ADMIN', 'SUPER_ADMIN']).optional().default('CITIZEN'),
+    providerId: z.string().optional(),
+    avatarUrl: z.string().optional(),
   }),
 };

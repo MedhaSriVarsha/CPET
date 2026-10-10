@@ -56,6 +56,11 @@ export const STATE_TRANSITIONS: Record<CaseStatus, TransitionRule[]> = {
   ],
   SUBMITTED: [
     {
+      target: 'IN_PROGRESS',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Organization starts working on case',
+    },
+    {
       target: 'ACKNOWLEDGED',
       allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN', 'SYSTEM'],
       description: 'Organization officially acknowledges receipt of case',
@@ -64,6 +69,21 @@ export const STATE_TRANSITIONS: Record<CaseStatus, TransitionRule[]> = {
       target: 'ASSIGNED',
       allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
       description: 'Case directly assigned to internal handler',
+    },
+    {
+      target: 'WAITING_FOR_USER',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Organization requests more information from citizen',
+    },
+    {
+      target: 'RESOLVED',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Directly mark submitted issue as resolved',
+    },
+    {
+      target: 'ESCALATED',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Escalate issue immediately',
     },
     {
       target: 'CANCELLED',
@@ -83,9 +103,19 @@ export const STATE_TRANSITIONS: Record<CaseStatus, TransitionRule[]> = {
       description: 'Begin active investigation or servicing',
     },
     {
+      target: 'SUBMITTED',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Return to submitted queue',
+    },
+    {
       target: 'WAITING_FOR_USER',
       allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
       description: 'Request further clarification or evidence from citizen',
+    },
+    {
+      target: 'RESOLVED',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Mark issue resolved',
     },
     {
       target: 'CANCELLED',
@@ -105,26 +135,41 @@ export const STATE_TRANSITIONS: Record<CaseStatus, TransitionRule[]> = {
       description: 'Reassign case to another agent',
     },
     {
+      target: 'SUBMITTED',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Unassign and return to unassigned queue',
+    },
+    {
       target: 'WAITING_FOR_USER',
       allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
       description: 'Agent requests details from citizen',
     },
+    {
+      target: 'RESOLVED',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Mark assigned issue resolved',
+    },
   ],
   IN_PROGRESS: [
+    {
+      target: 'RESOLVED',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Mark request or grievance as resolved with resolution notes',
+    },
     {
       target: 'WAITING_FOR_USER',
       allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
       description: 'Require citizen response or additional documents',
     },
     {
+      target: 'SUBMITTED',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Move back to submitted / new status',
+    },
+    {
       target: 'WAITING_FOR_ORGANIZATION',
       allowedRoles: ['CITIZEN', 'DONOR', 'SUPER_ADMIN'],
       description: 'Citizen supplied requested details, awaiting organization action',
-    },
-    {
-      target: 'RESOLVED',
-      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
-      description: 'Mark request or grievance as resolved with resolution notes',
     },
     {
       target: 'ESCALATED',
@@ -139,19 +184,29 @@ export const STATE_TRANSITIONS: Record<CaseStatus, TransitionRule[]> = {
   ],
   WAITING_FOR_USER: [
     {
-      target: 'WAITING_FOR_ORGANIZATION',
-      allowedRoles: ['CITIZEN', 'DONOR', 'SUPER_ADMIN'],
-      description: 'Citizen submitted response to inquiry',
-    },
-    {
       target: 'IN_PROGRESS',
       allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
       description: 'Resume work without further citizen data',
     },
     {
+      target: 'SUBMITTED',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Move to submitted queue',
+    },
+    {
+      target: 'WAITING_FOR_ORGANIZATION',
+      allowedRoles: ['CITIZEN', 'DONOR', 'SUPER_ADMIN'],
+      description: 'Citizen submitted response to inquiry',
+    },
+    {
       target: 'RESOLVED',
       allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
       description: 'Conclude and mark resolved',
+    },
+    {
+      target: 'ESCALATED',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Escalate case',
     },
   ],
   WAITING_FOR_ORGANIZATION: [
@@ -178,31 +233,46 @@ export const STATE_TRANSITIONS: Record<CaseStatus, TransitionRule[]> = {
   ],
   ESCALATED: [
     {
-      target: 'ASSIGNED',
-      allowedRoles: ['ORGANIZATION_ADMIN', 'CPET_ADMIN', 'SUPER_ADMIN'],
-      description: 'Reassign escalated case to senior tier handler',
-    },
-    {
       target: 'IN_PROGRESS',
       allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
       description: 'Senior tier begins investigation',
+    },
+    {
+      target: 'ASSIGNED',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Reassign escalated case to senior tier handler',
     },
     {
       target: 'RESOLVED',
       allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
       description: 'Senior tier resolves case',
     },
+    {
+      target: 'SUBMITTED',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Move back to submitted status',
+    },
   ],
   RESOLVED: [
     {
+      target: 'IN_PROGRESS',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Reopen and move back to in progress',
+    },
+    {
+      target: 'SUBMITTED',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Move back to submitted status',
+    },
+    {
       target: 'CLOSED',
-      allowedRoles: ['CITIZEN', 'DONOR', 'CPET_ADMIN', 'SUPER_ADMIN', 'SYSTEM'],
-      description: 'Citizen confirms successful resolution or auto-closure window expires',
+      allowedRoles: ['CITIZEN', 'DONOR', 'ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN', 'SYSTEM'],
+      description: 'Citizen or staff confirms successful resolution or closure',
     },
     {
       target: 'REOPENED',
-      allowedRoles: ['CITIZEN', 'DONOR', 'CPET_ADMIN', 'SUPER_ADMIN'],
-      description: 'Citizen disputes resolution within allowed window',
+      allowedRoles: ['CITIZEN', 'DONOR', 'ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Citizen or admin disputes resolution',
     },
   ],
   REOPENED: [
@@ -210,6 +280,11 @@ export const STATE_TRANSITIONS: Record<CaseStatus, TransitionRule[]> = {
       target: 'IN_PROGRESS',
       allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
       description: 'Reopen inquiry and investigate citizen dispute',
+    },
+    {
+      target: 'RESOLVED',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'ORGANIZATION_AGENT', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Mark reopened case resolved',
     },
     {
       target: 'ASSIGNED',
@@ -222,7 +297,18 @@ export const STATE_TRANSITIONS: Record<CaseStatus, TransitionRule[]> = {
       description: 'Escalate disputed case',
     },
   ],
-  CLOSED: [],
+  CLOSED: [
+    {
+      target: 'REOPENED',
+      allowedRoles: ['CITIZEN', 'DONOR', 'ORGANIZATION_ADMIN', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Reopen closed case',
+    },
+    {
+      target: 'IN_PROGRESS',
+      allowedRoles: ['ORGANIZATION_ADMIN', 'CPET_ADMIN', 'SUPER_ADMIN'],
+      description: 'Reopen and resume work',
+    },
+  ],
   CANCELLED: [],
   FAILED: [],
 };

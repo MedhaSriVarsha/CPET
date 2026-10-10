@@ -240,6 +240,22 @@ export class CaseController {
       next(err);
     }
   }
+
+  /**
+   * GET /api/v1/cases/admin/metrics
+   * System-wide metrics aggregator for CPET Admin
+   */
+  public async getAdminMetrics(_req: Request, res: Response, next: NextFunction) {
+    try {
+      const metrics = await caseService.getAdminMetrics();
+      res.status(200).json({
+        success: true,
+        data: metrics,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export const caseController = new CaseController();
