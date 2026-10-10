@@ -31,7 +31,7 @@ interface AuthContextType extends AuthState {
   logout: () => Promise<void>;
   authFetch: (url: string, options?: RequestInit) => Promise<Response>;
 }
-
+const API_BASE_URL = 'https://cpet-backend.onrender.com';
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -52,7 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshPromiseRef.current = (async () => {
       try {
         const storedRefreshToken = localStorage.getItem('cpet_refresh_token');
-        const res = await fetch('/api/v1/auth/refresh', {
+        const res = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refreshToken: storedRefreshToken || undefined }),
@@ -121,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchCurrentUser = useCallback(
     async (authToken: string) => {
       try {
-        let res = await fetch('/api/v1/users/me', {
+        let res = await fetch(`${API_BASE_URL}/api/v1/users/me`, {
           headers: {
             Authorization: `Bearer ${authToken}`,
           },
@@ -132,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (res.status === 401) {
           const newToken = await refreshAccessToken();
           if (newToken) {
-            res = await fetch('/api/v1/users/me', {
+            res = await fetch(`${API_BASE_URL}/api/v1/users/me`, {
               headers: {
                 Authorization: `Bearer ${newToken}`,
               },
@@ -179,7 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const cleanEmail = (email || '').trim();
     const cleanPassword = (password || '').trim();
 
-    const res = await fetch('/api/v1/auth/login', {
+    const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -204,7 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const registerCitizen = async (data: any): Promise<UserProfile> => {
-    const res = await fetch('/api/v1/auth/citizen/signup', {
+    const res = await fetch(`${API_BASE_URL}/api/v1/auth/citizen/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -229,7 +229,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const registerOrganization = async (data: any): Promise<UserProfile> => {
-    const res = await fetch('/api/v1/auth/organization/signup', {
+    const res = await fetch(`${API_BASE_URL}/api/v1/auth/organization/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -254,7 +254,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const requestOtp = async (target: string, purpose: string) => {
-    const res = await fetch('/api/v1/auth/otp/request', {
+    const res = await fetch(`${API_BASE_URL}/api/v1/auth/otp/request`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ target, purpose }),
@@ -269,7 +269,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const verifyOtp = async (target: string, otp: string, purpose: string): Promise<UserProfile | null> => {
-    const res = await fetch('/api/v1/auth/otp/verify', {
+    const res = await fetch(`${API_BASE_URL}/api/v1/auth/otp/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -299,7 +299,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resendOtp = async (target: string, purpose: string) => {
-    const res = await fetch('/api/v1/auth/otp/resend', {
+    const res = await fetch(`${API_BASE_URL}/api/v1/auth/otp/resend`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ target, purpose }),
@@ -314,7 +314,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resetPassword = async (target: string, otp: string, newPassword: string) => {
-    const res = await fetch('/api/v1/auth/reset-password', {
+    const res = await fetch(`${API_BASE_URL}/api/v1/auth/reset-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ target, otp, newPassword }),
@@ -329,7 +329,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const socialLogin = async (data: { provider: 'GOOGLE' | 'APPLE'; email: string; name: string; role?: string }): Promise<UserProfile> => {
-    const res = await fetch('/api/v1/auth/social-login', {
+    const res = await fetch(`${API_BASE_URL}/api/v1/auth/social-login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -356,7 +356,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = async (data: { name?: string; phone?: string }) => {
     if (!token) throw new Error('Not authenticated');
 
-    const res = await authFetch('/api/v1/users/me', {
+    const res = await authfetch(`${API_BASE_URL}/api/v1/users/me`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -376,7 +376,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       const storedRefreshToken = localStorage.getItem('cpet_refresh_token');
-      await fetch('/api/v1/auth/logout', {
+      await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
