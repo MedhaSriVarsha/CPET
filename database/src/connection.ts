@@ -1,4 +1,4 @@
-import mongoose, { ConnectOptions } from 'mongoose';
+import mongoose from 'mongoose';
 
 export interface DatabaseHealth {
   status: 'connected' | 'connecting' | 'disconnected' | 'error';
@@ -56,7 +56,7 @@ class DatabaseManager {
 
     this.isConnecting = true;
 
-    const connectOptions: ConnectOptions = {
+   const connectOptions = {
       maxPoolSize: options.maxPoolSize || 50,
       minPoolSize: options.minPoolSize || 5,
       serverSelectionTimeoutMS: options.serverSelectionTimeoutMS || 5000,
